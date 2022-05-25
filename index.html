@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>OpenLayers</title>
+    <!-- openlayers -->
+    <link href="lib/ol/ol.css" rel="stylesheet" />
+    <script src="lib/ol/ol.js"></script>
+    <!-- bootstrap -->
+    <!-- <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v5.3.3/build/ol.js"></script> -->
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v5.3.3/css/ol.css"> -->
+
+    <link href="lib/bootstrap/css/bootstrap.bundle.min.js" rel="stylesheet" />
+    <script src="lib/bootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .ol-popup {
+            position: absolute;
+            background-color: white;
+            -webkit-filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
+            filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.2));
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #cccccc;
+            left: -50px;
+            min-width: 280px;
+            bottom: 13px;
+        }
+        
+        .ol-popup::after,
+        .ol-popup::before {
+            top: 100%;
+            border: solid transparent;
+            content: " ";
+            height: 0;
+            width: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        .ol-popup::after {
+            border-top-color: white;
+            border-width: 10px;
+            left: 40px;
+            margin-left: -10px;
+        }
+        
+        .ol-popup::before {
+            border-top-color: #cccccc;
+            border-width: 11px;
+            left: 48px;
+            margin-left: -11px;
+        }
+        
+        .ol-popup-closer {
+            text-decoration: none;
+            position: absolute;
+            top: 2px;
+            right: 8px;
+        }
+        
+        .ol-popup-closer::after {
+            content: " X ";
+        }
+    </style>
+</head>
+
+<body>
+    <!-- style="width:800px;height:800px;" -->
+    <div id="map"></div>
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+    <!-- <button id="zoomIn" class="btn btn-primary">放大</button> -->
+    <!-- <button id="zoomOut" class="btn btn-primary">缩小</button> -->
+    <!-- <button id="toLeft" class="btn btn-primary">左移</button> -->
+    <!-- <button id="toRight" class="btn btn-primary">右移</button> -->
+    <!-- <button id="toTop" class="btn btn-primary">上移</button> -->
+    <!-- <button id="toBottom" class="btn btn-primary">下移</button> -->
+    <!-- <button id="toBeijing" class="btn btn-primary">平移至北京</button> -->
+    <script>
+        var container = document.getElementById("popup");
+        var content = document.getElementById("popup-content")
+        var closer = document.getElementById("popup-closer")
+        var overlay = new ol.Overlay({
+            element: container,
+            autoPan: true,
+            autoPanAnimation: {
+                duration: 250
+            }
+        })
+        var cillayer = new ol.layer.Vector({
+            source: new ol.source.Vector()
+        });
+        var layer = new ol.layer.Vector({
+            source: new ol.source.Vector()
+        });
+        // let self = this;
+        var map = new ol.Map({
+            target: 'map',
+            // 设置地图图层
+            layers: [
+                new ol.layer.Tile({
+                    // 创建一个使用Open Street Map地图源的瓦片图层
+                    // source: new ol.source.OSM(),
+                    source: new ol.source.XYZ({
+                            url: 'https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}'
+                        })
+                        // style: self.deviceIconStylew, //图片样式设置
+                        // zIndex: 9999,
+                }),
+                layer,
+                cillayer,
+                // new ol.layer.Vector({
+                //     title: 'add Layer',
+                //     source: new ol.source.Vector({
+                //         // features: ol.format.GeoJSON().readFeatures('lib/json/test.geojson'),
+                //         // projection: 'EPSG:4326',
+                //         // url: "lib/json/test.geojson", //GeoJSON的文件路径，用户可以根据需求而改变
+                //         // format: new ol.format.GeoJSON()
+                //     }),
+                //     style: styleFunction
+                // })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([120.50102, 33.20107]),
+                zoom: 6,
+                zIndex: -1
+                    // projection: 'EPSG:4326',
+                    // center: [120, 30],
+                    // zoom: 8
+                    // projection: 'EPSG:3857',
+                    // center: ol.proj.transform([120, 30], 'EPSG:4326', 'EPSG:3857'),
+                    // zoom: 15
+            }),
+
+        });
+        map.addOverlay(overlay);
+        // 关闭popup
+        closer.onclick = function() {
+            overlay.setPosition(undefined);
+            closer.blur();
+            return false;
+        };
+        // 监听鼠标单击事件，点击feature后弹出popup
+        map.on('click', function(e) {
+            var coordinate = e.coordinate;
+            var feature = map.forEachFeatureAtPixel(e.pixel, function(feature, layer) {
+                return feature;
+            });
+            if (feature) {
+                overlay.setPosition(e.coordinate);
+                // var hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(coordinate));
+                if (feature.get('name') === '盐城市大丰区大丰港经济区临港工业区格') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大丰' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '大丰' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '中南汇' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港经济区临港工业区格' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '托克、苏美达' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '不可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大丰' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '大丰' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '辉丰' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '辉丰' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '不可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '南通市经济技术开发区通盛南路1号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '中化南通' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '托克、苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '江苏省仪征市扬州化学工业园区中化路1号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '中化扬州' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '托克、苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '扬州化学工业园区仪征市大连路8-8号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '恒基达鑫' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '江苏省如皋市长江镇堤顶路65号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '南通阳鸿' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '托克、苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '可出口 正本厂检单+炼厂配合盖章' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '仓市浮桥镇浏家港石化路1号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '太仓阳鸿' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '常熟市碧溪街道建业路8号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '常熟宏智' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '常熟经济技术开发区滨江路8号1幢') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '沿江' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '沿江城市 起点太仓 终点南京 包括：太仓 常熟 南通 张家港 扬州' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '常熟千红' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、南通化轻' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '珠海市高栏港经济区风鹰北路3号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '华南' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '东莞立沙岛 珠海港区' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '中化珠海' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、托克' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '珠海市高栏港经济区南迳湾') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '华南' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '东莞立沙岛 珠海港区' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '恒基达鑫' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '广东省东莞市东莞市虎门港开发区内的沙田立沙岛') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '华南' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '东莞立沙岛 珠海港区' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '东莞阳鸿' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '3kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、浙江物产、厦门象屿' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '静海县唐官屯物流园区一大道一号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '唐官屯 三和众诚' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + '大部分调油辅料' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '/' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '华盛' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '不可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '不可保税	' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '潍坊滨海经济技术开发区黄海路00888号1号楼') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '潍坊森达美' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯	' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '2kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税	' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '天津市滨海新区临港经济区清河道580号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '天津千红' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯	' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '最大2kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、南通化轻' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '不可保税		' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '连云港市连云区中山中路129号新海岸大厦1201号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '连云港千红' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯	' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '2kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达、南通化轻' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税		' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '可出口 正本厂检单' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '船单 铁路（需改造）	' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '已合作' + "</code> <br>";
+                } else if (feature.get('name') === '连云港市连云区开发区板桥工业园') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '连云港国际' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE、二甲苯	' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '2kt' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '苏美达' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税		' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '可出口 正本厂检单' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单	' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else if (feature.get('name') === '龙口市龙岗街道环海中路386号') {
+                    console.log(feature.get('name'));
+                    content.innerHTML = "<code>区域：</code><code>" + '大华北' + "</code> <br>" +
+                        "<code>划分界限:</code><code>" + '京津冀 山东全域 连云港' + "</code> <br>" +
+                        "<code>库区名:</code><code>" + '龙口国储' + "</code> <br>" +
+                        // "<code>库区地址:</code><code>" + '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）' + "</code> <br>" +
+                        "<code>可存商品类别:</code><code>" + 'MTBE 二甲苯 芳烃	' + "</code> <br>" +
+                        "<code>最小罐容:</code><code>" + '5kt 损耗大' + "</code> <br>" +
+                        "<code>租期:</code><code>" + '长租、短租' + "</code> <br>" +
+                        "<code>可用资方:</code><code>" + '国储' + "</code> <br>" +
+                        "<code>是否可接外轮:</code><code>" + '可接外轮	' + "</code> <br>" +
+                        "<code>是否可进口保税:</code><code>" + '可保税		' + "</code> <br>" +
+                        "<code>是否可出口:</code><code>" + '不可出口' + "</code> <br>" +
+                        "<code>装卸货类型:</code><code>" + '车单、船单	' + "</code> <br>" +
+                        "<code>是否已合作:</code><code>" + '未合作' + "</code> <br>";
+                } else {
+                    var hdms = ol.coordinate.toStringHDMS(ol.proj.toLonLat(coordinate));
+
+                    content.innerHTML = "<p>你点击了这里：</p><code>" + hdms + "</code>";
+                }
+                // 弹出popup
+                overlay.setPosition(coordinate);
+            }
+
+
+        });
+        // 监听鼠标移动事件，鼠标移动到feature区域时变为手形
+        map.on('pointermove', function(e) {
+            var pixel = map.getEventPixel(e.originalEvent);
+            var hit = map.hasFeatureAtPixel(pixel);
+            map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+        });
+
+        // this.addPoint()
+
+        var vector = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                url: 'lib/json/data.json',
+                format: new ol.format.GeoJSON()
+                    // style: styleFunction
+            }),
+            // features: new GeoJSON().readFeatures('lib/json/test.geojson'),
+            style: new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: '#122AB5',
+                    width: 1
+                }),
+                fill: new ol.style.Fill({
+                    // color: 'rgb(151, 181, 217,0.5)',
+                    color: 'rgb(151, 181, 217,0.5)'
+
+                }),
+                text: new ol.style.Text({ // 文字样式
+                    // text: 'aaa', // 文字内容
+                    font: '15px Calibri,sans-serif', // 字体大小
+                    stroke: new ol.style.Stroke({ // 文字边界样式
+                        color: 'blue', // 文字边界颜色
+                        width: 1 // 文字边界宽度
+                    }),
+                    fill: new ol.style.Fill({ // 文字填充样式
+                        color: 'black' // 文字填充颜色
+                    })
+                })
+            }),
+        });
+        map.addLayer(vector);
+        vector.setZIndex(1)
+
+
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [104, 30], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 10,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // layer.setZIndex(50000)
+        // layer.getSource().addFeature(circle);
+        // 前面的代码我们已经看了很多遍了，关键是下面这段代码
+        // 添加一个用于选择Feature的交互方式
+        var selectSingleClick = new ol.interaction.Select({
+            // API文档里面有说明，可以设置style参数，用来设置选中后的样式，但是这个地方我们注释掉不用，因为就算不注释，也没作用，为什么？
+            // style: new ol.style.Style({
+            //     image: new ol.style.Circle({
+            //         radius: 10,
+            //         fill: new ol.style.Fill({
+            //             color: 'blue'
+            //         })
+            //     })
+            // })
+        });
+        // map.addInteraction(selectSingleClick);
+        // // 监听选中事件，然后在事件处理函数中改变被选中的`feature`的样式
+        // selectSingleClick.on('select', function(event) {
+        //     // this.select = new ol.Select({
+        //     //     filter: function(feature, layer) {
+        //     //         return feature === circle;
+        //     //     }
+        //     // })
+        //     event.selected[0].setStyle(new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'red'
+        //             })
+        //         }),
+        //         // layers: [cillayer],
+
+        //     }));
+
+
+        // })
+
+
+
+        // 添加一个用于选择Feature的交互方式
+        // map.addInteraction(new ol.interaction.Select({
+        //     condition: ol.events.condition.pointerMove,     // 唯一的不同之处，设置鼠标移到feature上就选取
+        //     style: new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'blue'
+        //             })
+        //         })
+        //     })
+        // }));
+
+
+        // // 添加一个用于选择Feature的交互方式
+        // map.addInteraction(new ol.interaction.Select({
+        //     style: new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'pink'
+        //             })
+        //         })
+        //     }),
+        //     // layer: [circle],
+        //     // 关键： 设置过了条件，可以用feature来写过滤，也可以用layer来写过滤
+        //     // filter: function(feature, layer) {
+        //     //     return feature === circle;
+        //     // }
+        // }));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // vector.setZIndex(1)
+
+        // // 添加一个用于选择Feature的交互方式
+        // map.addInteraction(new ol.interaction.Select({
+        //     condition: ol.events.condition.pointerMove, // 唯一的不同之处，设置鼠标移到feature上就选取
+        //     style: new ol.style.Style({
+        //         stroke: new ol.style.Stroke({
+        //             color: '#122AB5',
+        //             width: 1
+        //         }),
+        //         fill: new ol.style.Fill({
+        //             // color: 'rgb(151, 181, 217,0.5)'
+        //             color: 'blue'
+        //         }),
+        //     }),
+        //     // 关键： 设置过了条件，可以用feature来写过滤，也可以用layer来写过滤
+        //     filter: function(feature, layer) {
+        //         return layer === vector;
+        //     }
+        // }));
+
+
+        // var pointLayer = new ol.layer.Vector({
+        //     source: new ol.source.Vector()
+        // });
+
+        // // 添加点
+        // var point = new ol.Feature({
+        //     geometry: new ol.geom.Point([0, 0])
+        // });
+        // point.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 1200,
+        //         fill: new ol.style.Fill({
+        //             color: 'blue'
+        //         }),
+        //         stroke: new ol.style.Stroke({
+        //             color: 'blue',
+        //             size: 20
+        //         })
+        //     })
+        // }));
+        // pointLayer.getSource().addFeature(point);
+        // map.addLayer(pointLayer);
+
+        // pointLayer.setZIndex(3000);
+        // 在地图上添加一个圆
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [104, 30], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+        // layer.getSource().addFeature(circle);
+        // layer.setZIndex(3000);
+
+        // 大丰区
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [120.50102, 33.20107], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 盐城市大丰区大丰港经济区临港工业区格
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.462448, 33.252682], 'EPSG:4326', 'EPSG:3857')),
+            name: '盐城市大丰区大丰港经济区临港工业区格'
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.831268, 33.216282], 'EPSG:4326', 'EPSG:3857')),
+            name: '盐城市大丰区大丰港二期码头凸堤内南港路南侧（仓储二大道）'
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 太仓 
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [121.12975, 31.45911], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 常熟
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [120.75224, 31.65381], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 南通
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [120.85737, 32.00986], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 张家港
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [120.5555, 31.87547], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 扬州
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [119.43157, 32.39463], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+
+        // 南通市经济技术开发区通盛南路1号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.948888, 31.828933], 'EPSG:4326', 'EPSG:3857')),
+            name: '南通市经济技术开发区通盛南路1号'
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 江苏省仪征市扬州化学工业园区中化路1号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [119.12528, 32.25583], 'EPSG:4326', 'EPSG:3857')),
+            name: '江苏省仪征市扬州化学工业园区中化路1号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 扬州化学工业园区仪征市大连路8-8号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [119.15278, 32.25654], 'EPSG:4326', 'EPSG:3857')),
+            name: '扬州化学工业园区仪征市大连路8-8号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 江苏省如皋市长江镇堤顶路65号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.584473, 32.059639], 'EPSG:4326', 'EPSG:3857')),
+            name: '江苏省如皋市长江镇堤顶路65号'
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 仓市浮桥镇浏家港石化路1号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [121.27066, 31.566], 'EPSG:4326', 'EPSG:3857')),
+            name: '仓市浮桥镇浏家港石化路1号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 常熟市碧溪街道建业路8号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.99468, 31.75017], 'EPSG:4326', 'EPSG:3857')),
+            name: '常熟市碧溪街道建业路8号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 江苏省南通市经济技术开发区中兴路15号3幢308室
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.929558, 31.919029], 'EPSG:4326', 'EPSG:3857')),
+            name: '江苏省南通市经济技术开发区中兴路15号3幢308室'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 常熟经济技术开发区滨江路8号1幢
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.929558, 31.919029], 'EPSG:4326', 'EPSG:3857')),
+            name: '常熟经济技术开发区滨江路8号1幢'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 东莞立沙岛
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [113.582695, 22.953569], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 珠海港区
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [119.61063, 39.9345], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+        // cillayer.getSource().addFeature(circle);
+        // cillayer.setZIndex(3000);
+
+        // 珠海市高栏港经济区风鹰北路3号
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [113.223869, 21.915146], 'EPSG:4326', 'EPSG:3857')),
+            name: '珠海市高栏港经济区风鹰北路3号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 珠海市高栏港经济区南迳湾
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [113.223869, 21.915146], 'EPSG:4326', 'EPSG:3857')),
+            name: '珠海市高栏港经济区南迳湾'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 广东省东莞市东莞市虎门港开发区内的沙田立沙岛
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [113.75179, 23.02067], 'EPSG:4326', 'EPSG:3857')),
+            name: '广东省东莞市东莞市虎门港开发区内的沙田立沙岛'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // // 北京
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [116.23128, 40.22077], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+        // // 天津
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [116.413384, 39.910925], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+        // // 河北
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [117.30983, 39.71755], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+        // // 山东
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [113.74579649169924, 38.20560842324715], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+        // // 连云港
+        // var circle = new ol.Feature({
+        //     geometry: new ol.geom.Point(ol.proj.transform(
+        //         [119.1773, 34.84065], 'EPSG:4326', 'EPSG:3857'))
+        // })
+        // circle.setStyle(new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //         radius: 5,
+        //         fill: new ol.style.Fill({
+        //             color: 'red'
+        //         })
+        //     })
+        // }));
+
+
+        // 天津市滨海新区临港经济区清河道580号:117.764482,38.955808
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [117.764482, 38.955808], 'EPSG:4326', 'EPSG:3857')),
+            name: '天津市滨海新区临港经济区清河道580号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+
+        // 静海县唐官屯物流园区一大道一号 :116.947402,38.728878
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [116.947402, 38.728878], 'EPSG:4326', 'EPSG:3857')),
+            name: '静海县唐官屯物流园区一大道一号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+        // 连云港市连云区开发区板桥工业园:119.443992,34.645378
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [119.443992, 34.645378], 'EPSG:4326', 'EPSG:3857')),
+            name: '连云港市连云区开发区板桥工业园'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+        // 连云港市连云区中山中路129号新海岸大厦1201号:119.41586,34.742128
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [119.41586, 34.742128], 'EPSG:4326', 'EPSG:3857')),
+            name: '连云港市连云区中山中路129号新海岸大厦1201号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+        // 龙口市龙岗街道环海中路386号:120.322459,37.674173
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [120.322459, 37.674173], 'EPSG:4326', 'EPSG:3857')),
+            name: '龙口市龙岗街道环海中路386号'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(3000);
+        // 潍坊滨海经济技术开发区黄海路00888号1号楼:118.816759,37.196372
+        var circle = new ol.Feature({
+            geometry: new ol.geom.Point(ol.proj.transform(
+                [118.816759, 37.196372], 'EPSG:4326', 'EPSG:3857')),
+            name: '潍坊滨海经济技术开发区黄海路00888号1号楼'
+
+        })
+        circle.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 5,
+                fill: new ol.style.Fill({
+                    color: 'blue'
+                })
+            })
+        }));
+        cillayer.getSource().addFeature(circle);
+        cillayer.setZIndex(2);
+
+
+
+
+
+        // map.addInteraction(selectSingleClick);
+        // // 监听选中事件，然后在事件处理函数中改变被选中的`feature`的样式
+        // selectSingleClick.on('select', function(event) {
+        //     event.selected[0].setStyle(new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'blue'
+        //             })
+        //         })
+        //     }));
+        // })
+
+        // 置顶point图层到最上面
+        // function upPoint(elem) {
+        //     if (elem.checked) {
+        //         pointLayer.setZIndex(3);
+        //         osmLayer.setZIndex(osmLayer.getZIndex()-1);
+        //         circleLayer.setZIndex(circleLayer.getZIndex()-1);
+        //     }
+        // }
+
+
+
+        // // 绘制坐标点
+        // // addpoint() {
+        // let feature = new Feature({
+        //     title: 'beijing',
+        //     geometry: new Point([116.403218, 39.92372]),
+        // })
+        // feature.setStyle(
+        //     new Style({
+        //         image: new CircleStyle({
+        //             fill: new Fill({
+        //                 color: 'blue',
+        //             }),
+        //             radius: 4,
+        //         }),
+        //     })
+        // );
+        // let source = new VectorSource()
+        // source.addFeature(feature)
+        // let layer = new VectorLayer()
+        // layer.setSource(source)
+        // map.addLayer(layer)
+        //     // }
+
+        // let newFeature = new Feature({
+        //     geometry: new Point(28.658262, 121.408217)
+        // });
+        // map.getSource().addFeatures([newFeature]);
+
+        // showFill();
+
+        // 放大
+        $('#zoomIn').click(function() {
+            var view = map.getView();
+            var zoom = view.getZoom();
+            view.setZoom(zoom + 1);
+        })
+
+        // 缩小
+        $('#zoomOut').click(function() {
+            var view = map.getView();
+            var zoom = view.getZoom();
+            view.setZoom(zoom - 1);
+        })
+
+        // 左移
+        $('#toLeft').click(function() {
+            var view = map.getView();
+            var center = view.getCenter();
+            center[0] += 50000;
+            view.setCenter(center);
+            map.render();
+        })
+
+        // 右移
+        $('#toRight').click(function() {
+            var view = map.getView();
+            var center = view.getCenter();
+            center[0] -= 50000;
+            view.setCenter(center);
+            map.render();
+        })
+
+        // 上移
+        $('#toTop').click(function() {
+            var view = map.getView();
+            var center = view.getCenter();
+            center[1] += 50000;
+            view.setCenter(center);
+            map.render();
+        })
+
+        // 下移
+        $('#toBottom').click(function() {
+            var view = map.getView();
+            var center = view.getCenter();
+            center[1] -= 50000;
+            view.setCenter(center);
+            map.render();
+        })
+
+        // // 平移至北京
+        // $('#toBeijing').click(function() {
+        //     var center = ol.proj.transform([116.20, 39.56], 'EPSG:4326', 'EPSG:3857');
+        //     var view = map.getView();
+        //     view.setCenter(center);
+        //     view.setZoom(9);
+        // })
+        // function showFill() {
+        //     var style = new ol.style.Style({
+        //         stroke: new ol.style.Stroke({
+        //             color: '#fff',
+        //             width: 2
+        //         }),
+        //         fill: new ol.style.Fill({
+        //             color: [38, 155, 0, 0.3]
+        //         })
+        //     })
+
+        //     $.getJSON('/lib/json/test.geojson', function(data) {
+        //         var features = new ol.format.GeoJSON().readFeatures(data);
+        //         vectorLayer.getSource().addFeatures(features);
+        //         vectorLayer.setStyle(style);
+        //     })
+        // }
+
+        // map.addLayer(cillayer)
+
+        // // 添加一个用于选择Feature的交互方式
+        // map.addInteraction(new ol.interaction.Select({
+        //     condition: ol.events.condition.pointerMove, // 唯一的不同之处，设置鼠标移到feature上就选取
+        //     style: new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'pink'
+        //             })
+        //         })
+        //     }),
+        //     // 关键： 设置过了条件，可以用feature来写过滤，也可以用layer来写过滤
+        //     filter: function(feature, layer) {
+        //         return layer !== vector;
+        //     }
+        // }));
+        map.addLayer(cillayer)
+
+        // map.addInteraction(new ol.interaction.Select({
+        //     // 设置选中后的style
+        //     style: new ol.style.Style({
+        //         image: new ol.style.Circle({
+        //             radius: 10,
+        //             fill: new ol.style.Fill({
+        //                 color: 'red'
+        //             })
+        //         }),
+        //         test: new ol.style.Text({
+        //             test: 'aaa'
+        //         })
+        //     }),
+        //     // 关键： 设置过了条件， 可以用feature来写过滤， 也可以用layer来写过滤
+        //     // filter: function(feature, layer) {
+        //     //     return layer === cillayer;
+        //     // }
+        // }));
+
+        // snap interaction - 鼠标捕捉
+        // new ol.interaction.Snap({
+        //     features: 要素集(ol.Collection),
+        //     pixelTolerance: 捕捉发生的距离，像素数，默认为，
+        //     source: 具有捕捉功能的图层(ol.source.Vector)
+        // })
+        // var styleFunction = function(feature) {
+        //     return new ol.style.Style({
+        //         stroke: new ol.style.Stroke({
+        //             color: feature.get('stroke'), //通过要素拿到具体的值
+        //             width: 2,
+        //             opacity: 1
+        //         }),
+        //         fill: new ol.style.Fill({
+        //             color: colorRgba(feature.get('fill'), feature.get('fill-opacity')),
+        //             ///opacity: feature.get('fill-opacity')
+        //         }),
+        //         text: new ol.style.Text({
+        //             text: feature.get('name'),
+        //             font: '12px bold serif',
+        //             fill: new ol.style.Fill({
+        //                 color: '#000'
+        //             }),
+        //             stroke: new ol.style.Stroke({
+        //                 color: '#fff',
+        //                 width: 2
+        //             })
+        //         })
+        //     })
+        // };
+        // viewer.screenSpaceEventHandler.setInputAction(function(movement) {
+        //     //获取鼠标移动后停留位置坐标
+        //     let ifcartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+        //     if (ifcartesian) {
+        //         let ball = Cesium.Ellipsoid.WGS84.cartesianToCartographic(ifcartesian);
+        //         Y_String = Cesium.Math.toDegrees(ball.latitude);
+        //         X_String = Cesium.Math.toDegrees(ball.longitude);
+        //         let high = viewer.scene.globe.getHeight(ball)
+        //         pointPosition = Cesium.Cartesian3.fromDegrees(X_String, Y_String, high);
+        //     }
+        //     let endPosition = [pointPosition.x, pointPosition.y];
+        //     //根据是否在多边形内部，在哪个多边形内部进行材质上色
+        //     if (isInPolygon(endPosition, polygon_point[0])) {
+        //         //高亮效果
+        //     }
+        // }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        // //检测点是否在多边形内部，返回T/F
+        // function isInPolygon(checkPoint, polygonPoints) {
+        //     var counter = 0;
+        //     var i;
+        //     var xinters;
+        //     var p1, p2;
+        //     var pointCount = polygonPoints.length;
+        //     p1 = polygonPoints[0];
+        //     for (i = 1; i <= pointCount; i++) {
+        //         p2 = polygonPoints[i % pointCount];
+        //         if (
+        //             checkPoint[0] > Math.min(p1[0], p2[0]) &&
+        //             checkPoint[0] <= Math.max(p1[0], p2[0])
+        //         ) {
+        //             if (checkPoint[1] <= Math.max(p1[1], p2[1])) {
+        //                 if (p1[0] != p2[0]) {
+        //                     xinters =
+        //                         (checkPoint[0] - p1[0]) *
+        //                         (p2[1] - p1[1]) /
+        //                         (p2[0] - p1[0]) +
+        //                         p1[1];
+        //                     if (p1[1] == p2[1] || checkPoint[1] <= xinters) {
+        //                         counter++;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         p1 = p2;
+        //     }
+        //     if (counter % 2 == 0) {
+        //         return false;
+        //     } else {
+        //         return true;
+        //     }
+        // };
+        // var viewer = new Cesium.Viewer('cesiumContainer');
+        // var highlightedEntity;
+        // var highlightColor = Cesium.Color.GREEN.withAlpha(0.6);
+        // var normalColor = Cesium.Color.YELLOW.withAlpha(0.6);
+
+        // //一种属性，如果实体当前被鼠标悬停，则返回高亮显示颜色，否则返回默认颜色.
+        // function createCallback(entity) {
+        //     var colorProperty = new Cesium.CallbackProperty(function(time, result) {
+        //         if (highlightedEntity === entity) {
+        //             return Cesium.Color.clone(highlightColor, result);
+        //         }
+        //         return Cesium.Color.clone(normalColor, result);
+        //     }, false);
+
+        //     return new Cesium.ColorMaterialProperty(colorProperty);
+        // }
+
+        // //这块写自己的json路径	
+        // var promise = Cesium.GeoJsonDataSource.load('lib/json/test.geojson'); // , {            clampToGround: true}
+        // viewer.dataSources.add(promise);
+        // viewer.flyTo(promise);
+        // promise.then(function(dataSource) {
+        //     viewer.dataSources.add(dataSource);
+
+        //     //获取实体数组
+        //     var entities = dataSource.entities.values;
+        //     for (var i = 0; i < entities.length; i++) {
+        //         var entity = entities[i];
+        //         entity.polygon.material = createCallback(entity);
+        //     }
+        // }).otherwise(function(error) {
+        //     //显示加载时遇到的任何错误.
+        //     window.alert(error);
+        // });
+
+        // var scene = viewer.scene;
+        // var handler = viewer.screenSpaceEventHandler;
+        // handler.setInputAction(function(movement) {
+        //     var pickedObject = scene.pick(movement.endPosition);
+        //     if (Cesium.defined(pickedObject) && pickedObject.id instanceof Cesium.Entity) {
+        //         highlightedEntity = pickedObject.id;
+        //     } else {
+        //         highlightedEntity = undefined;
+        //     }
+
+        // }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+
+
+        // const iconFeature = new Feature({
+        //     geometry: new Point([112, 30]),
+        //     name: 'Null Island',
+        //     population: 4000,
+        //     rainfall: 500,
+        // });
+        // const iconStyle = new Style({
+        //     image: new Icon({
+        //         anchor: [0.5, 46],
+        //         anchorXUnits: 'fraction',
+        //         anchorYUnits: 'pixels',
+        //         src: 'data/icon.png',
+        //     }),
+        // });
+        // iconFeature.setStyle(iconStyle);
+        // const vectorSource = new VectorSource({
+        //     features: [iconFeature],
+        // });
+
+        // const vectorLayer = new VectorLayer({
+        //     source: vectorSource,
+        // });
+        // const element = document.getElementById('popup');
+
+        // const popup1 = new Overlay({
+        //     element: element,
+        //     positioning: 'bottom-center',
+        //     stopEvent: false,
+        // });
+        // map.addOverlay(popup1);
+
+        // // display popup on click
+        // map.on('click', function(evt) {
+        //     const feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
+        //         return feature;
+        //     });
+        //     if (feature) {
+        //         popup.setPosition(evt.coordinate);
+        //         $(element).popover({
+        //             placement: 'top',
+        //             html: true,
+        //             content: feature.get('name'),
+        //         });
+        //         $(element).popover('show');
+        //     } else {
+        //         $(element).popover('dispose');
+        //     }
+        // });
+
+        // // change mouse cursor when over marker
+        // map.on('pointermove', function(e) {
+        //     const pixel = map.getEventPixel(e.originalEvent);
+        //     const hit = map.hasFeatureAtPixel(pixel);
+        //     map.getTarget().style.cursor = hit ? 'pointer' : '';
+        // });
+        // // Close the popup when the map is moved
+        // map.on('movestart', function() {
+        //     $(element).popover('dispose');
+        // });
+    </script>
+</body>
+
+</html>
